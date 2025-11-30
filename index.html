@@ -26,10 +26,23 @@
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-20px); } 100% { transform: translateY(0px); } }
         .animate-float { animation: float 6s ease-in-out infinite; }
+        .animate-pop-in {
+            animation: popIn 0.6s ease-out;
+        }
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-pink-100 via-purple-100 to-indigo-100 min-h-screen overflow-hidden">
     <div id="root"></div>
+
+    <!-- Background Music -->
+    <audio id="backgroundMusic" loop>
+        <source src="song.mp3" type="audio/mpeg">
+        Your browser does not support the audio element.
+    </audio>
 
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
@@ -37,6 +50,15 @@
         // Simple Heart Icon Component
         const HeartIcon = ({ size, className }) => (
             <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+        );
+
+        // Music Icon Component
+        const MusicIcon = ({ size, className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                <path d="M9 18V5l12-2v13"/>
+                <circle cx="6" cy="18" r="3"/>
+                <circle cx="18" cy="16" r="3"/>
+            </svg>
         );
 
         // Confetti Component
@@ -109,12 +131,18 @@
             const [stage, setStage] = useState('intro');
             const [candlesLit, setCandlesLit] = useState([true, true, true]);
             const [showConfetti, setShowConfetti] = useState(false);
+            const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+            const audioRef = useRef(null);
             
             // --- EDIT DETAILS HERE ---
             const name = ""; 
             const message = "Wishing you a day filled with laughter, love, and everything you've ever wished for. You make the world brighter just by being in it! ✨"; 
             const yourName = "Rabbey";
             // -------------------------
+
+            useEffect(() => {
+                audioRef.current = document.getElementById('backgroundMusic');
+            }, []);
 
             useEffect(() => {
                 if (stage === 'cake' && candlesLit.every(lit => !lit)) {
@@ -131,6 +159,37 @@
                 setCandlesLit(newCandles);
             };
 
+            const toggleMusic = () => {
+                if (audioRef.current) {
+                    if (isMusicPlaying) {
+                        audioRef.current.pause();
+                    } else {
+                        audioRef.current.play().catch(e => {
+                            console.log('Audio play failed:', e);
+                            // Fallback: ask user to interact first
+                            alert('Click anywhere on the page to start music!');
+                        });
+                    }
+                    setIsMusicPlaying(!isMusicPlaying);
+                }
+            };
+
+            // Auto-start music when user interacts with the page
+            useEffect(() => {
+                const startMusicOnInteraction = () => {
+                    if (audioRef.current && !isMusicPlaying) {
+                        audioRef.current.play().then(() => {
+                            setIsMusicPlaying(true);
+                        }).catch(e => {
+                            console.log('Auto-play prevented:', e);
+                        });
+                        document.removeEventListener('click', startMusicOnInteraction);
+                    }
+                };
+                document.addEventListener('click', startMusicOnInteraction);
+                return () => document.removeEventListener('click', startMusicOnInteraction);
+            }, [isMusicPlaying]);
+
             return (
                 <div className="relative min-h-screen flex items-center justify-center font-sans text-slate-800">
                     <Confetti active={showConfetti} />
@@ -141,6 +200,22 @@
                         <div className="absolute top-1/3 right-20 text-purple-300 opacity-50 animate-float" style={{animationDelay: '1s'}}><HeartIcon size={32} /></div>
                         <div className="absolute bottom-20 left-1/4 text-indigo-300 opacity-50 animate-float" style={{animationDelay: '2s'}}><HeartIcon size={56} /></div>
                     </div>
+
+                    {/* Music Control Button */}
+                    <button 
+                        onClick={toggleMusic}
+                        className={`fixed top-4 right-4 z-50 p-3 rounded-full shadow-lg transition-all transform hover:scale-110 ${
+                            isMusicPlaying 
+                            ? 'bg-pink-500 text-white shadow-pink-500/50' 
+                            : 'bg-white text-pink-500 shadow-pink-200/50'
+                        }`}
+                        title={isMusicPlaying ? "Pause Music" : "Play Music"}
+                    >
+                        <MusicIcon size={24} />
+                        {isMusicPlaying && (
+                            <div className="absolute -top-1 -right-1 w-3 h-3 bg-pink-500 rounded-full animate-ping"></div>
+                        )}
+                    </button>
 
                     <div className="z-10 w-full max-w-2xl p-4">
                         {stage === 'intro' && (
